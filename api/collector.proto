@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "./;collector";
+
+service Collector {
+  rpc PushEvents(Events) returns (google.protobuf.Empty);
+}
+
+message Events {
+  repeated Event items = 1;
+}
+
+message Event {
+  UUID traceID = 1; // Idempotency Key
+  UUID gzyID = 2; // Client ID generated on the client side
+
+  UUID appID = 3; // Application ID
+  string metadata = 4; // App/device... metadata (json)
+
+  string requestUrl = 5; // Current url (url with query)
+  string referralUrl = 6; // Referral url (url with query)
+
+  string clientID = 7; // User ID
+  string clientData = 8; // User metadata (json)
+
+  string userAgent = 9; // client user agent
+
+  string cookies = 10; // browser string "key1=val1; key2=val2;" from document.cookie
+
+  string category = 11; // event category
+  string name = 12; // event name
+  string label = 13; // event label
+  string payload = 14; // event metadata/payload (json)
+
+  google.protobuf.Timestamp createdAt = 15;
+}
+
+message UUID {
+  bytes value = 1;
+}
