@@ -3,6 +3,7 @@ package collector
 
 import (
 	"context"
+
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -19,5 +20,9 @@ func NewGrpcServer() *Collector {
 }
 
 func (c *Collector) PushEvents(_ context.Context, _ *Events) (*emptypb.Empty, error) {
+	return nil, nil
+}
+
+func (c *Collector) Validator(_ context.Context, _ *Event) (*ValidationResult, error) {
 	return nil, nil
 }

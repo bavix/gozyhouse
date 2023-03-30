@@ -6,7 +6,14 @@ import "google/protobuf/empty.proto";
 option go_package = "./;collector";
 
 service Collector {
-  rpc PushEvents(Events) returns (google.protobuf.Empty);
+  // Method for sending events in a batch.
+  // The limit must be set via ENV.
+  // Events that fail validation are ignored.
+  rpc SendBeacon(Events) returns (google.protobuf.Empty);
+
+  // Validator in a real application is not desirable to use.
+  // It is needed only for debugging.
+  rpc Validator(Event) returns (ValidationResult);
 }
 
 message Events {
@@ -14,10 +21,10 @@ message Events {
 }
 
 message Event {
-  UUID traceID = 1; // Idempotency Key
-  UUID gzyID = 2; // Client ID generated on the client side
+  bytes traceID = 1; // Idempotency Key
+  bytes gzyID = 2; // Client ID generated on the client side
 
-  UUID appID = 3; // Application ID
+  bytes appID = 3; // Application ID
   string metadata = 4; // App/device... metadata (json)
 
   string requestUrl = 5; // Current url (url with query)
@@ -38,6 +45,14 @@ message Event {
   google.protobuf.Timestamp createdAt = 15;
 }
 
-message UUID {
-  bytes value = 1;
+message ValidationResult {
+  bool success = 1; // has it been validated
+  repeated Item items = 2; // error set
+
+  message Item {
+    sint32 num = 1; // event number in array
+    string name = 2; // the name of the key in the event
+    string desc = 3; // error description
+    sint64 err = 4; // internal error code
+  }
 }

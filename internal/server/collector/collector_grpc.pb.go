@@ -23,7 +23,13 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CollectorClient interface {
-	PushEvents(ctx context.Context, in *Events, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Method for sending events in a batch.
+	// The limit must be set via ENV.
+	// Events that fail validation are ignored.
+	SendBeacon(ctx context.Context, in *Events, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Validator in a real application is not desirable to use.
+	// It is needed only for debugging.
+	Validator(ctx context.Context, in *Event, opts ...grpc.CallOption) (*ValidationResult, error)
 }
 
 type collectorClient struct {
@@ -34,9 +40,18 @@ func NewCollectorClient(cc grpc.ClientConnInterface) CollectorClient {
 	return &collectorClient{cc}
 }
 
-func (c *collectorClient) PushEvents(ctx context.Context, in *Events, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *collectorClient) SendBeacon(ctx context.Context, in *Events, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/Collector/PushEvents", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/Collector/SendBeacon", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *collectorClient) Validator(ctx context.Context, in *Event, opts ...grpc.CallOption) (*ValidationResult, error) {
+	out := new(ValidationResult)
+	err := c.cc.Invoke(ctx, "/Collector/Validator", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +62,13 @@ func (c *collectorClient) PushEvents(ctx context.Context, in *Events, opts ...gr
 // All implementations must embed UnimplementedCollectorServer
 // for forward compatibility
 type CollectorServer interface {
-	PushEvents(context.Context, *Events) (*emptypb.Empty, error)
+	// Method for sending events in a batch.
+	// The limit must be set via ENV.
+	// Events that fail validation are ignored.
+	SendBeacon(context.Context, *Events) (*emptypb.Empty, error)
+	// Validator in a real application is not desirable to use.
+	// It is needed only for debugging.
+	Validator(context.Context, *Event) (*ValidationResult, error)
 	mustEmbedUnimplementedCollectorServer()
 }
 
@@ -55,8 +76,11 @@ type CollectorServer interface {
 type UnimplementedCollectorServer struct {
 }
 
-func (UnimplementedCollectorServer) PushEvents(context.Context, *Events) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PushEvents not implemented")
+func (UnimplementedCollectorServer) SendBeacon(context.Context, *Events) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendBeacon not implemented")
+}
+func (UnimplementedCollectorServer) Validator(context.Context, *Event) (*ValidationResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Validator not implemented")
 }
 func (UnimplementedCollectorServer) mustEmbedUnimplementedCollectorServer() {}
 
@@ -71,20 +95,38 @@ func RegisterCollectorServer(s grpc.ServiceRegistrar, srv CollectorServer) {
 	s.RegisterService(&Collector_ServiceDesc, srv)
 }
 
-func _Collector_PushEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Collector_SendBeacon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Events)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CollectorServer).PushEvents(ctx, in)
+		return srv.(CollectorServer).SendBeacon(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Collector/PushEvents",
+		FullMethod: "/Collector/SendBeacon",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CollectorServer).PushEvents(ctx, req.(*Events))
+		return srv.(CollectorServer).SendBeacon(ctx, req.(*Events))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Collector_Validator_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Event)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CollectorServer).Validator(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Collector/Validator",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CollectorServer).Validator(ctx, req.(*Event))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -97,8 +139,12 @@ var Collector_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*CollectorServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "PushEvents",
-			Handler:    _Collector_PushEvents_Handler,
+			MethodName: "SendBeacon",
+			Handler:    _Collector_SendBeacon_Handler,
+		},
+		{
+			MethodName: "Validator",
+			Handler:    _Collector_Validator_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
