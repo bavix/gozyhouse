@@ -1,19 +1,21 @@
 syntax = "proto3";
 
+package gozyhouse.collector.v1;
+
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
-option go_package = "./;collector";
+option go_package = "/internal/app/collector";
 
 service Collector {
   // Method for sending events in a batch.
   // The limit must be set via ENV.
   // Events that fail validation are ignored.
-  rpc SendBeacon(Events) returns (google.protobuf.Empty);
+  rpc SendBeacon(Events) returns (stream google.protobuf.Empty) {};
 
   // Validator in a real application is not desirable to use.
   // It is needed only for debugging.
-  rpc Validator(Event) returns (ValidationResult);
+  rpc Validator(Event) returns (stream ValidationResult) {};
 }
 
 message Events {
@@ -31,18 +33,19 @@ message Event {
   string referralUrl = 6; // Referral url (url with query)
 
   string clientID = 7; // User ID
-  string clientData = 8; // User metadata (json)
+  string clientIP = 8; // User ID
+  string clientData = 9; // User metadata (json)
 
-  string userAgent = 9; // client user agent
+  string userAgent = 10; // client user agent
 
-  string cookies = 10; // browser string "key1=val1; key2=val2;" from document.cookie
+  string cookies = 11; // browser string "key1=val1; key2=val2;" from document.cookie
 
-  string category = 11; // event category
-  string name = 12; // event name
-  string label = 13; // event label
-  string payload = 14; // event metadata/payload (json)
+  string category = 12; // event category
+  string name = 13; // event name
+  string label = 14; // event label
+  string payload = 15; // event metadata/payload (json)
 
-  google.protobuf.Timestamp createdAt = 15;
+  google.protobuf.Timestamp createdAt = 16;
 }
 
 message ValidationResult {

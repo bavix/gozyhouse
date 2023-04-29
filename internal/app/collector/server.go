@@ -1,4 +1,4 @@
-//go:generate protoc -I ../../../api/ --go_out=. --go-grpc_out=. ../../../api/collector.proto
+//go:generate protoc -I ../../../api/ --go_out=./../../../ --go-grpc_out=./../../../ ../../../api/collector.proto
 package collector
 
 import (
